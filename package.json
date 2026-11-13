@@ -1,0 +1,25 @@
+{
+  "name": "voice-cut-showreel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "16:9 motion-graphics showreel cut to a voiceover, rendered frame by frame from code as one continuous camera shot.",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "assets": "node scripts/fetch-assets.mjs",
+    "standin": "node scripts/standin.mjs",
+    "plan": "node scripts/plan.mjs",
+    "prep": "node scripts/prep.mjs",
+    "serve": "node scripts/serve.mjs",
+    "stills": "node scripts/render.mjs --stills",
+    "preview": "node scripts/render.mjs --scale 0.5 --jpeg && node scripts/audio.mjs --preview",
+    "render": "node scripts/render.mjs && node scripts/audio.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@dawod/thmanyah-font-web": "*",
+    "@fontsource/jetbrains-mono": "^5.0.0",
+    "playwright": "1.63.0",
+    "three": "^0.187.0"
+  }
+}
