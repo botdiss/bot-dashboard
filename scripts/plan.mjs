@@ -100,7 +100,7 @@ const M = {};
 { // 6 BRANDS
   const at = D.brands.at || [];
   const a1 = wordT('brands', at[0], 0.2), a2 = wordT('brands', at[1], 0.5), key = Math.max(a2 + 1.5, wordT('brands', D.brands.keyAt, 0.8));
-  const spin0 = Math.max(X.x56[1] - 0.2, a1 - 0.5), land1 = spin0 + 0.65;
+  const spin0 = X.x56[1] - 0.2, land1 = Math.max(spin0 + 0.65, a1 + 0.12);   // already spinning as the whip-pan lands, settles on its name
   let [grab, drop, pop2, fly0, fill] = fit([land1 + 0.45, a2 - 0.2, a2 - 0.05, a2 + 0.7, key - 0.06], land1 + 0.3, Math.min(key - 0.06, X.x67[0] - 0.7), 0.22);
   M.brands = { spin0, land1, cur0: land1 - 0.1, grab, drop, pop2, fly0, fill, key: fill + 0.06 };
   fx(spin0, 'move-spin', { len: 0.7, db: -3 }); fx(grab, 'click-mouse-firm', { db: 2 }); fx((grab + drop) / 2 + 0.1, 'whoosh-fast-soft'); fx(pop2, 'pop-large-in', { db: 2 });

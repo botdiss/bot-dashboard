@@ -16,7 +16,13 @@ const meas = sh('ffmpeg', ['-hide_banner', '-i', inputs.voice, '-af', 'loudnorm=
 const j = JSON.parse(meas.slice(meas.lastIndexOf('{'), meas.lastIndexOf('}') + 1));
 const voiceChain = `aresample=48000,loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}:offset=${j.target_offset}:linear=true,aresample=48000,aformat=channel_layouts=stereo`;
 
-const ins = ['-i', inputs.voice], parts = [`[0:a]${voiceChain}[voice]`], labels = []; const log = []; let k = 1;
+// render the voice stem, measure it again, and trim any remainder so it sits on −14 LUFS exactly
+const stem = path.join(BUILD, 'voice-14.wav'), lufs = (f) => { const e = sh('ffmpeg', ['-hide_banner', '-i', f, '-af', 'ebur128', '-f', 'null', '-'], { allowFail: true }).stderr; return parseFloat(e.slice(e.lastIndexOf('Integrated loudness')).match(/I:\s+(-?[\d.]+) LUFS/)[1]); };
+mkdirp(BUILD); sh('ffmpeg', ['-y', '-v', 'error', '-i', inputs.voice, '-af', voiceChain, '-c:a', 'pcm_s24le', stem]);
+let got = lufs(stem);
+if (Math.abs(got + 14) > 0.2) { const tmp = stem.replace('.wav', '.tmp.wav'); sh('ffmpeg', ['-y', '-v', 'error', '-i', stem, '-af', `volume=${(-14 - got).toFixed(2)}dB,alimiter=limit=0.84:level=false`, '-c:a', 'pcm_s24le', tmp]); fs.renameSync(tmp, stem); got = lufs(stem); }
+
+const ins = ['-i', stem], parts = ['[0:a]aformat=channel_layouts=stereo[voice]'], labels = []; const log = []; let k = 1;
 for (const cue of kit ? TL.sfx : []) {
   const s = kit.sounds.find((x) => x.id === cue.id), file = s && path.join(kitDir, s.file); if (!s || !exists(file)) { log.push(`  (missing) ${cue.id}`); continue; }
   let rate = cue.rate || 1; if (cue.fit && s.span_seconds) rate = Math.min(s.adapt?.rate?.[1] ?? 1.1, Math.max(s.adapt?.rate?.[0] ?? 0.9, s.span_seconds / cue.fit));
@@ -34,7 +40,5 @@ mkdirp(OUT); const wav = path.join(BUILD, 'mix.wav'), out = path.join(OUT, previ
 fs.writeFileSync(path.join(BUILD, 'audio-cues.txt'), log.join('\n'));
 sh('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', parts.join(';'), '-map', '[mix]', '-ar', '48000', '-c:a', 'pcm_s24le', wav]);
 sh('ffmpeg', ['-y', '-v', 'error', '-i', video, '-i', wav, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-movflags', '+faststart', '-shortest', out]);
-const check = sh('ffmpeg', ['-hide_banner', '-i', inputs.voice, '-af', voiceChain + ',ebur128=peak=true', '-f', 'null', '-'], { allowFail: true }).stderr;
-const I = check.match(/I:\s+(-?[\d.]+) LUFS/g)?.pop();
-console.log(`audio: voice ${j.input_i} LUFS → ${I ? I.replace(/I:\s+/, '') : '-14 LUFS'} · ${labels.length} SFX placed by sync point (list: ${rel(path.join(BUILD, 'audio-cues.txt'))})`);
+console.log(`audio: voice ${j.input_i} LUFS → ${got.toFixed(1)} LUFS · ${labels.length} SFX placed by sync point (list: ${rel(path.join(BUILD, 'audio-cues.txt'))})`);
 console.log(`→ ${rel(out)}`);

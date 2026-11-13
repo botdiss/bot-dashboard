@@ -23,7 +23,7 @@ const SOFT = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignor
 let mode = arg('gpu', 'auto');
 async function open(flags) {
   const browser = await chromium.launch({ args: flags });
-  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: scale });
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error('[page error]', e.message)); page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.error('[page]', m.text().slice(0, 300)); });
   await page.goto(url); await page.waitForFunction('window.__ready === true', null, { timeout: 180000 });
   return { browser, page, cdp: await page.context().newCDPSession(page), info: await page.evaluate('window.__info') };
@@ -35,7 +35,7 @@ async function launch() {
   }
   return open(SOFT);
 }
-const shot = async (s, clean = false) => Buffer.from((await s.cdp.send('Page.captureScreenshot', { format: jpeg || clean ? 'jpeg' : 'png', quality: 95, optimizeForSpeed: true, captureBeyondViewport: false })).data, 'base64');
+const shot = async (s, clean = false) => Buffer.from((await s.cdp.send('Page.captureScreenshot', { format: jpeg || clean ? 'jpeg' : 'png', quality: 95, optimizeForSpeed: true, captureBeyondViewport: false, clip: { x: 0, y: 0, width: W, height: H, scale: clean ? 1 : scale } })).data, 'base64');
 
 if (stills) {
   const s = await launch(); console.log(`renderer: ${s.info.gl}`);
@@ -82,7 +82,7 @@ await Promise.all(Array.from({ length: nWorkers }, async (_, k) => {
   const s = k === 0 ? first : await open(mode === 'gpu' ? GPU : SOFT);
   const seg = path.join(segDir, `seg-${String(k).padStart(2, '0')}.mp4`);
   const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', jpeg ? 'mjpeg' : 'png', '-i', '-',
-    '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', scale < 1 ? 'veryfast' : 'slow', '-crf', scale < 1 ? '20' : '15',
+    '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', scale < 1 ? 'veryfast' : 'slow', '-crf', scale < 1 ? '22' : '16', '-maxrate', scale < 1 ? '8M' : '28M', '-bufsize', scale < 1 ? '16M' : '56M',
     '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv', '-r', String(FPS), '-g', String(FPS), seg], { stdio: ['pipe', 'inherit', 'inherit'] });
   const closed = new Promise((res, rej) => ff.on('exit', (c) => (c === 0 ? res() : rej(new Error('ffmpeg exited ' + c)))));
   for (let f = a; f < b; f++) {

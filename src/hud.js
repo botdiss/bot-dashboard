@@ -8,7 +8,7 @@ export function makeHud(R) {
   { // one static noise tile; each frame only its offset changes (deterministic per frame index)
     const n = document.createElement('canvas'); n.width = n.height = 512; const ng = n.getContext('2d'), id = ng.createImageData(512, 512);
     let seed = 1234567; const rnd = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-    for (let i = 0; i < id.data.length; i += 4) { const v = 128 + (rnd() + rnd() + rnd() - 1.5) * 150; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+    for (let i = 0; i < id.data.length; i += 4) { const v = 128 + (rnd() + rnd() + rnd() - 1.5) * 96; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
     ng.putImageData(id, 0, 0); grain.style.backgroundImage = `url(${n.toDataURL()})`;
   }
   const bracket = (x, y, sx, sy, len) => { g.beginPath(); g.moveTo(x + sx * len, y); g.lineTo(x, y); g.lineTo(x, y + sy * len); g.stroke(); };
